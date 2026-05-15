@@ -1,0 +1,39 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --teal: #0d9488;
+  --teal-dark: #0f766e;
+  --teal-light: #99f6e4;
+  --green: #059669;
+  --bg: #0b1120;
+  --surface: #111827;
+  --surface-2: #1a2235;
+  --border: #1f2d42;
+  --text: #f1f5f9;
+  --text-muted: #64748b;
+  --text-soft: #94a3b8;
+  --red: #ef4444;
+  --orange: #f59e0b;
+  --font: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}

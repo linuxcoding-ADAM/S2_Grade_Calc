@@ -105,7 +105,7 @@ export default function App() {
                 onClick={() => setDark(d => !d)}
                 aria-label="Basculer le thème"
               >
-                <span className="toggle-icon">{dark ? '🌙' : '☀️'}</span>
+                <span className="toggle-icon">{dark ? '🌑' : '☀️'}</span>
                 <div className="toggle-track">
                   <div className="toggle-thumb" />
                 </div>

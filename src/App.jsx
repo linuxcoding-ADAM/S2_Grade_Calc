@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { exportToPDF } from './pdfExport.js'
 import './App.css'
 
@@ -20,11 +20,11 @@ function calcNote(mod, exam, ca) {
 }
 
 function getMention(avg) {
-  if (avg >= 16) return { label: 'Excellent',   cls: 'green'  }
-  if (avg >= 14) return { label: 'Très Bien',   cls: 'green'  }
-  if (avg >= 12) return { label: 'Bien',         cls: 'teal'   }
-  if (avg >= 10) return { label: 'Passable',     cls: 'orange' }
-  return               { label: 'Insuffisant',  cls: 'red'    }
+  if (avg >= 16) return { label: 'Excellent',  cls: 'green'  }
+  if (avg >= 14) return { label: 'Très Bien',  cls: 'green'  }
+  if (avg >= 12) return { label: 'Bien',        cls: 'teal'   }
+  if (avg >= 10) return { label: 'Passable',    cls: 'orange' }
+  return               { label: 'Insuffisant', cls: 'red'    }
 }
 
 function getNoteCls(note) {
@@ -48,14 +48,13 @@ export default function App() {
   )
   const [studentName, setStudentName] = useState('')
   const [exporting, setExporting] = useState(false)
-  const [dark, setDark] = useState(() => {
-    return localStorage.getItem('theme') === 'dark'
-  })
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const avgRef = useRef(null)
+  const prevAllFilled = useRef(false)
 
   useEffect(() => {
-    const theme = dark ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
 
   function handleChange(id, field, val) {
@@ -65,6 +64,7 @@ export default function App() {
   function reset() {
     setGrades(Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }])))
     setStudentName('')
+    prevAllFilled.current = false
   }
 
   const results = modules.map(m => {
@@ -75,12 +75,24 @@ export default function App() {
   })
 
   const filled = results.filter(r => r.note !== null)
+  const allFilled = filled.length === modules.length
   const totalCoef = filled.reduce((s, r) => s + r.coef, 0)
   const moyenne = totalCoef > 0
     ? Math.round((filled.reduce((s, r) => s + r.note * r.coef, 0) / totalCoef) * 100) / 100
     : null
 
-  const mention = moyenne !== null ? getMention(moyenne) : null
+  const showAvg = allFilled && moyenne !== null
+  const mention = showAvg ? getMention(moyenne) : null
+
+  useEffect(() => {
+    if (showAvg && !prevAllFilled.current) {
+      prevAllFilled.current = true
+      setTimeout(() => {
+        avgRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 120)
+    }
+    if (!showAvg) prevAllFilled.current = false
+  }, [showAvg])
 
   async function handleExport() {
     setExporting(true)
@@ -89,101 +101,122 @@ export default function App() {
     setExporting(false)
   }
 
+  const progress = filled.length / modules.length
+
   return (
     <div className="app">
 
       <header className="header">
         <div className="header-inner">
           <div className="header-top">
-            <div>
+            <div className="header-left">
               <span className="univ-tag">Université Béjaïa · L1 ST</span>
               <h1>Calculateur de notes <span className="s2-tag">S2</span></h1>
+              <p className="header-sub">Remplis toutes tes notes pour révéler ta moyenne finale</p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+            <div className="header-right">
               <button
                 className="theme-toggle"
                 onClick={() => setDark(d => !d)}
                 aria-label="Basculer le thème"
               >
-                <span className="toggle-icon">{dark ? '🌑' : '☀️'}</span>
+                <span className="toggle-icon-wrap">
+                  <span className={`ti sun ${!dark ? 'ti-active' : ''}`}>☀️</span>
+                  <span className={`ti moon ${dark ? 'ti-active' : ''}`}>🌙</span>
+                </span>
                 <div className="toggle-track">
                   <div className="toggle-thumb" />
                 </div>
-                <span>{dark ? 'Sombre' : 'Clair'}</span>
+                <span className="toggle-label">{dark ? 'Sombre' : 'Clair'}</span>
               </button>
               <div className="header-icon">🎓</div>
             </div>
           </div>
-          <p className="header-sub">Saisis tes notes pour calculer ta moyenne du semestre</p>
+        </div>
+        <div className="header-progress-track">
+          <div className="header-progress-fill" style={{ width: `${progress * 100}%` }} />
         </div>
       </header>
 
       <div className="main">
 
-        <div className="name-row">
-          <label className="name-label">Prénom et nom (optionnel — apparaît sur le PDF)</label>
-          <input
-            className="name-input"
-            type="text"
-            placeholder="ex: ADAM"
-            value={studentName}
-            onChange={e => setStudentName(e.target.value)}
-          />
+        {/* Progress indicator */}
+        <div className="prog-pill">
+          <div className="prog-bar-wrap">
+            <div className="prog-bar-fill" style={{ width: `${progress * 100}%` }} />
+          </div>
+          <span className="prog-label">
+            {filled.length === 0
+              ? 'Aucun module renseigné'
+              : allFilled
+              ? '✓  Tous les modules sont complétés'
+              : `${filled.length} / ${modules.length} modules`}
+          </span>
         </div>
 
-        {moyenne !== null && (
-          <div className={`avg-card avg-${mention.cls}`}>
-            <div className="avg-left">
-              <span className="avg-eyebrow">Moyenne générale</span>
-              <div className="avg-value-row">
-                <span className="avg-value">{moyenne.toFixed(2)}</span>
-                <span className="avg-denom">/20</span>
-              </div>
-              {filled.length < modules.length && (
-                <span className="avg-partial">{filled.length}/{modules.length} modules renseignés</span>
-              )}
-            </div>
-            <span className={`mention mention-${mention.cls}`}>{mention.label}</span>
+        {/* Student name */}
+        <div className="name-row">
+          <label className="name-label">
+            Prénom et nom
+            <span className="name-label-opt"> — optionnel, apparaît sur le PDF</span>
+          </label>
+          <div className="name-input-wrap">
+            <span className="name-icon">👤</span>
+            <input
+              className="name-input"
+              type="text"
+              placeholder="ex: ADAM"
+              value={studentName}
+              onChange={e => setStudentName(e.target.value)}
+            />
           </div>
-        )}
+        </div>
 
+        {/* Module cards */}
         <div className="cards">
-          {results.map(mod => {
+          {results.map((mod, idx) => {
             const g = grades[mod.id]
             const isTP = mod.examW === 0
             const pct = mod.note !== null ? (mod.note / 20) * 100 : 0
+            const noteCls = getNoteCls(mod.note)
+            const isDone = mod.note !== null
 
             return (
-              <div key={mod.id} className="card">
+              <div
+                key={mod.id}
+                className={`card ${isDone ? 'card-done' : ''}`}
+                style={{ '--delay': `${idx * 45}ms` }}
+              >
                 <div className="card-header">
                   <div className="card-title-group">
-                    <h2 className="card-name">{mod.name}</h2>
+                    <div className="card-name-row">
+                      <span className={`status-dot ${isDone ? noteCls : ''}`} />
+                      <h2 className="card-name">{mod.name}</h2>
+                    </div>
                     <div className="card-meta">
-                      {!isTP && <span>Exam {mod.examW * 100}%</span>}
-                      <span>CA {mod.caW * 100}%</span>
-                      <span className="coef-badge">Coef {mod.coef}</span>
+                      {!isTP && <span className="meta-tag">Exam {mod.examW * 100}%</span>}
+                      <span className="meta-tag">CA {mod.caW * 100}%</span>
+                      <span className="meta-tag coef-badge">Coef {mod.coef}</span>
                     </div>
                   </div>
-                  {mod.note !== null && (
-                    <div className={`note-chip ${getNoteCls(mod.note)}`}>
-                      {mod.note.toFixed(2)}
-                    </div>
-                  )}
+                  <div className={`note-chip ${isDone ? noteCls : 'note-empty'}`}>
+                    {isDone ? mod.note.toFixed(2) : '—'}
+                  </div>
                 </div>
 
-                {mod.note !== null && (
-                  <div className="progress-bar">
-                    <div
-                      className={`progress-fill ${getNoteCls(mod.note)}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                )}
+                <div className="progress-bar">
+                  <div
+                    className={`progress-fill ${noteCls}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
 
                 <div className="inputs-row">
                   {!isTP && (
                     <div className="input-group">
-                      <label className="input-label label-exam">Examen</label>
+                      <label className="input-label label-exam">
+                        <span className="ldot exam-dot" /> Examen
+                      </label>
                       <input
                         type="number"
                         className="grade-input"
@@ -196,7 +229,7 @@ export default function App() {
                   )}
                   <div className="input-group">
                     <label className="input-label label-ca">
-                      {isTP ? 'Note TP' : 'TD / CA'}
+                      <span className="ldot ca-dot" /> {isTP ? 'Note TP' : 'TD / CA'}
                     </label>
                     <input
                       type="number"
@@ -213,35 +246,54 @@ export default function App() {
           })}
         </div>
 
+        {/* Recap */}
         {filled.length > 0 && (
           <div className="recap">
-            <div className="recap-head">Récapitulatif</div>
+            <div className="recap-head">
+              <span>Récapitulatif</span>
+              <span className="recap-count">{filled.length} / {modules.length}</span>
+            </div>
             {results.map(r => r.note !== null && (
               <div key={r.id} className="recap-row">
+                <span className={`recap-dot ${getNoteCls(r.note)}`} />
                 <span className="recap-name">{r.name}</span>
-                <span className="recap-coef">coef {r.coef}</span>
+                <span className="recap-coef">×{r.coef}</span>
                 <span className={`recap-note ${getNoteCls(r.note)}`}>{r.note.toFixed(2)}</span>
               </div>
             ))}
-            {moyenne !== null && (
-              <div className={`recap-avg mention-${mention.cls}`}>
-                <span>Moyenne S2</span>
-                <span>{moyenne.toFixed(2)} / 20</span>
-              </div>
-            )}
           </div>
         )}
 
+        {/* Final average — ONLY when all modules are filled */}
+        {showAvg && (
+          <div ref={avgRef} className={`avg-card avg-${mention.cls}`}>
+            <div className="avg-glow" />
+            <div className="avg-left">
+              <span className="avg-eyebrow">✦ Moyenne générale S2</span>
+              <div className="avg-value-row">
+                <span className={`avg-value avg-color-${mention.cls}`}>{moyenne.toFixed(2)}</span>
+                <span className="avg-denom">/20</span>
+              </div>
+              <span className="avg-note-small">{modules.length} modules · coefficients pondérés</span>
+            </div>
+            <div className="avg-right">
+              <span className={`mention mention-${mention.cls}`}>{mention.label}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
         <div className="actions">
-          {filled.length > 0 && (
+          {showAvg && (
             <button className="btn-export" onClick={handleExport} disabled={exporting}>
               {exporting
-                ? <><span className="spinner" /> Génération...</>
-                : <><span>↓</span> Exporter en PDF</>
-              }
+                ? <><span className="spinner" /> Génération du PDF...</>
+                : <><span className="btn-dl-icon">↓</span> Exporter en PDF</>}
             </button>
           )}
-          <button className="btn-reset" onClick={reset}>Réinitialiser</button>
+          <button className="btn-reset" onClick={reset}>
+            <span>↺</span> Réinitialiser
+          </button>
         </div>
 
       </div>

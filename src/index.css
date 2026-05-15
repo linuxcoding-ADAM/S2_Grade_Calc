@@ -10,7 +10,7 @@
   --teal-bg:    #f0fdfa;
   --teal-light: #ccfbf1;
   --green:      #059669;
-  --bg:         #f8fafc;
+  --bg:         #f1f5f9;
   --surface:    #ffffff;
   --border:     #e2e8f0;
   --border-2:   #f1f5f9;
@@ -20,27 +20,31 @@
   --red:        #ef4444;
   --orange:     #f59e0b;
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow:     0 4px 16px rgba(0,0,0,0.07);
+  --shadow:     0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
   --font:       'Sora', sans-serif;
 }
 
 [data-theme='dark'] {
   --teal:       #2dd4bf;
   --teal-dark:  #14b8a6;
-  --teal-bg:    #042f2e;
+  --teal-bg:    rgba(45,212,191,0.07);
   --teal-light: #134e4a;
   --green:      #34d399;
-  --bg:         #0a0f1a;
-  --surface:    #111827;
-  --border:     #1e293b;
-  --border-2:   #0f172a;
-  --text:       #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-soft:  #475569;
+  --bg:         #070c14;
+  --surface:    #0f1623;
+  --border:     #1e2d3d;
+  --border-2:   #0a1120;
+  --text:       #e8f0fe;
+  --text-muted: #8899aa;
+  --text-soft:  #3d5166;
   --red:        #f87171;
   --orange:     #fbbf24;
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow:     0 4px 16px rgba(0,0,0,0.4);
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow:     0 4px 24px rgba(0,0,0,0.5), 0 1px 6px rgba(0,0,0,0.3);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -49,14 +53,12 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  transition: background 0.3s ease, color 0.3s ease;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
 }
-
-input[type='number'] {
-  -moz-appearance: textfield;
-}
+input[type='number'] { -moz-appearance: textfield; }

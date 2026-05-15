@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { exportToPDF } from './pdfExport'
+import { exportToPDF } from './pdfExport.js'
 import './App.css'
 
 const modules = [

@@ -1,21 +1,91 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// Colors
-const TEAL   = [13, 148, 136]
-const DARK   = [15, 23, 42]
-const MUTED  = [100, 116, 139]
-const LIGHT  = [241, 245, 249]
-const WHITE  = [255, 255, 255]
-const GREEN  = [16, 185, 129]
-const ORANGE = [245, 158, 11]
-const RED    = [239, 68, 68]
+// ─────────────────────────────────────────────────────────────
+//  THEME PALETTES
+// ─────────────────────────────────────────────────────────────
+const LIGHT_THEME = {
+  pageBg:       [248, 250, 252],
+  headerBg:     [13, 148, 136],
+  headerBg2:    [8, 145, 178],
+  headerText:   [255, 255, 255],
+  headerSub:    [204, 251, 241],
+  cardBg:       [255, 255, 255],
+  cardBorder:   [226, 232, 240],
+  tableHead:    [15, 23, 42],
+  tableHeadTxt: [255, 255, 255],
+  tableAlt:     [248, 250, 252],
+  tableRow:     [255, 255, 255],
+  tableBorder:  [226, 232, 240],
+  text:         [15, 23, 42],
+  textMuted:    [100, 116, 139],
+  textSoft:     [148, 163, 184],
+  divider:      [226, 232, 240],
+  sectionBg:    [241, 245, 249],
+  accentBar:    [13, 148, 136],
+  footerBg:     [241, 245, 249],
+  footerText:   [100, 116, 139],
+  barTrack:     [226, 232, 240],
+  green:        [16, 185, 129],
+  greenBg:      [209, 250, 229],
+  greenText:    [6, 95, 70],
+  teal:         [13, 148, 136],
+  tealBg:       [204, 251, 241],
+  tealText:     [15, 118, 110],
+  orange:       [245, 158, 11],
+  orangeBg:     [254, 243, 199],
+  orangeText:   [146, 64, 14],
+  red:          [239, 68, 68],
+  redBg:        [254, 226, 226],
+  redText:      [153, 27, 27],
+  white:        [255, 255, 255],
+}
 
-function getNoteColor(note) {
-  if (note >= 14) return GREEN
-  if (note >= 10) return TEAL
-  if (note >= 8)  return ORANGE
-  return RED
+const DARK_THEME = {
+  pageBg:       [10, 15, 26],
+  headerBg:     [4, 47, 46],
+  headerBg2:    [12, 42, 61],
+  headerText:   [241, 245, 249],
+  headerSub:    [94, 234, 212],
+  cardBg:       [17, 24, 39],
+  cardBorder:   [30, 41, 59],
+  tableHead:    [30, 41, 59],
+  tableHeadTxt: [226, 232, 240],
+  tableAlt:     [15, 23, 42],
+  tableRow:     [17, 24, 39],
+  tableBorder:  [30, 41, 59],
+  text:         [241, 245, 249],
+  textMuted:    [148, 163, 184],
+  textSoft:     [71, 85, 105],
+  divider:      [30, 41, 59],
+  sectionBg:    [15, 23, 42],
+  accentBar:    [45, 212, 191],
+  footerBg:     [15, 23, 42],
+  footerText:   [71, 85, 105],
+  barTrack:     [30, 41, 59],
+  green:        [52, 211, 153],
+  greenBg:      [6, 78, 59],
+  greenText:    [110, 231, 183],
+  teal:         [45, 212, 191],
+  tealBg:       [19, 78, 74],
+  tealText:     [94, 234, 212],
+  orange:       [251, 191, 36],
+  orangeBg:     [69, 26, 3],
+  orangeText:   [252, 211, 77],
+  red:          [248, 113, 113],
+  redBg:        [69, 10, 10],
+  redText:      [252, 165, 165],
+  white:        [255, 255, 255],
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────────────────────
+function getNoteColors(note, t) {
+  if (note >= 14) return { fg: t.green,  bg: t.greenBg,  label: t.greenText  }
+  if (note >= 10) return { fg: t.teal,   bg: t.tealBg,   label: t.tealText   }
+  if (note >= 8)  return { fg: t.orange, bg: t.orangeBg, label: t.orangeText }
+  return               { fg: t.red,    bg: t.redBg,    label: t.redText    }
 }
 
 function getMention(avg) {
@@ -26,80 +96,133 @@ function getMention(avg) {
   return 'Insuffisant'
 }
 
-function rgb(arr) {
-  return `rgb(${arr.join(',')})`
+function isDarkMode() {
+  return document.documentElement.getAttribute('data-theme') === 'dark'
 }
 
+// ─────────────────────────────────────────────────────────────
+//  MAIN EXPORT
+// ─────────────────────────────────────────────────────────────
 export function exportToPDF(results, moyenne, studentName) {
+  const t = isDarkMode() ? DARK_THEME : LIGHT_THEME
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()   // 210
   const H = doc.internal.pageSize.getHeight()  // 297
 
-  // ── Header band ──────────────────────────────────────────
-  doc.setFillColor(...TEAL)
-  doc.rect(0, 0, W, 42, 'F')
+  // ── Page background ──────────────────────────────────────
+  doc.setFillColor(...t.pageBg)
+  doc.rect(0, 0, W, H, 'F')
 
-  // Decorative circle top-right
-  doc.setFillColor(255, 255, 255, 0.06)
+  // ── Header gradient band ─────────────────────────────────
+  const HEADER_H = 52
+  doc.setFillColor(...t.headerBg)
+  doc.rect(0, 0, W, HEADER_H, 'F')
+
+  // Right accent strip
+  doc.setFillColor(...t.headerBg2)
+  doc.rect(W - 60, 0, 60, HEADER_H, 'F')
+
+  // Decorative rings
   doc.setDrawColor(255, 255, 255)
-  doc.setLineWidth(0.3)
-  doc.circle(195, 8, 22, 'S')
-  doc.circle(195, 8, 14, 'S')
+  doc.setLineWidth(0.25)
+  doc.setGState(doc.GState({ opacity: 0.08 }))
+  doc.circle(W - 18, 6, 30, 'S')
+  doc.circle(W - 18, 6, 20, 'S')
+  doc.circle(W - 18, 6, 10, 'S')
+  doc.setGState(doc.GState({ opacity: 1 }))
 
   // University label
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7.5)
-  doc.setTextColor(...WHITE)
-  doc.text('UNIVERSITÉ ABDERRAHMANE MIRA — BÉJAÏA', 14, 12)
+  doc.setFontSize(7)
+  doc.setTextColor(...t.headerSub)
+  doc.text('UNIVERSITÉ ABDERRAHMANE MIRA — BÉJAÏA', 14, 11)
 
-  // Title
-  doc.setFontSize(22)
+  // Thin rule under label
+  doc.setDrawColor(...t.headerSub)
+  doc.setLineWidth(0.3)
+  doc.setGState(doc.GState({ opacity: 0.3 }))
+  doc.line(14, 13, 120, 13)
+  doc.setGState(doc.GState({ opacity: 1 }))
+
+  // Main title
   doc.setFont('helvetica', 'bold')
-  doc.text('Relevé de Notes — S2', 14, 26)
+  doc.setFontSize(20)
+  doc.setTextColor(...t.headerText)
+  doc.text('Relevé de Notes', 14, 26)
 
-  // Sub
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(200, 240, 235)
-  doc.text('Licence Sciences & Technologies · L1', 14, 34)
-
-  // Date top-right
-  const today = new Date().toLocaleDateString('fr-DZ', {
-    day: '2-digit', month: 'long', year: 'numeric'
-  })
+  // S2 pill
+  doc.setFillColor(...t.accentBar)
+  doc.roundedRect(14, 30, 17, 8, 2, 2, 'F')
+  doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.setTextColor(...WHITE)
-  doc.text(today, W - 14, 34, { align: 'right' })
+  doc.setTextColor(...t.white)
+  doc.text('S2', 22.5, 35.5, { align: 'center' })
 
-  // ── Student info row ──────────────────────────────────────
-  let y = 52
+  // Subtitle
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(...t.headerSub)
+  doc.text('Licence Sciences & Technologies · L1', 34, 35.5)
 
-  if (studentName && studentName.trim()) {
-    doc.setFillColor(...LIGHT)
-    doc.roundedRect(14, y - 5, W - 28, 12, 2, 2, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(...DARK)
-    doc.text('Étudiant(e) :', 19, y + 2)
-    doc.setFont('helvetica', 'normal')
-    doc.text(studentName.trim(), 48, y + 2)
-    y += 18
-  }
+  // Date — top right
+  const today = new Date().toLocaleDateString('fr-DZ', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...t.headerSub)
+  doc.text(today, W - 14, 11, { align: 'right' })
 
-  // ── Modules table ─────────────────────────────────────────
+  // ── Info strip (name + date) ─────────────────────────────
+  let y = HEADER_H + 10
+
+  doc.setFillColor(...t.cardBg)
+  doc.setDrawColor(...t.cardBorder)
+  doc.setLineWidth(0.4)
+  doc.roundedRect(14, y, W - 28, 16, 3, 3, 'FD')
+
+  // Left teal accent
+  doc.setFillColor(...t.accentBar)
+  doc.roundedRect(14, y, 4, 16, 1.5, 1.5, 'F')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...t.textMuted)
+  doc.text('ÉTUDIANT(E)', 22, y + 6)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(...t.text)
+  const name = studentName?.trim() || '—'
+  doc.text(name, 22, y + 13)
+
+  // Right side: semestre info
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...t.textMuted)
+  doc.text('SEMESTRE', W - 60, y + 6)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(...t.text)
+  doc.text('Semestre 2 — 2024/2025', W - 60, y + 13)
+
+  y += 26
+
+  // ── Section title: Modules ───────────────────────────────
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...t.textMuted)
+  doc.text('▸  DÉTAIL DES MODULES', 14, y)
+  y += 5
+
+  // ── Modules table ────────────────────────────────────────
   const filled = results.filter(r => r.note !== null)
 
   const tableRows = results.map(r => {
-    const pct = r.examW === 0
-      ? 'TP (100% CA)'
-      : `Exam ${r.examW * 100}% / CA ${r.caW * 100}%`
-
-    return [
-      r.name,
-      pct,
-      r.coef,
-      r.note !== null ? r.note.toFixed(2) : '—',
-    ]
+    const pond = r.examW === 0
+      ? 'TP — 100 % CA'
+      : `Exam ${r.examW * 100} %  /  CA ${r.caW * 100} %`
+    return [r.name, pond, String(r.coef), r.note !== null ? r.note.toFixed(2) : '—']
   })
 
   autoTable(doc, {
@@ -109,145 +232,197 @@ export function exportToPDF(results, moyenne, studentName) {
     margin: { left: 14, right: 14 },
     styles: {
       font: 'helvetica',
-      fontSize: 9.5,
-      cellPadding: { top: 4, bottom: 4, left: 5, right: 5 },
-      lineColor: [226, 232, 240],
+      fontSize: 9,
+      cellPadding: { top: 4.5, bottom: 4.5, left: 6, right: 6 },
+      lineColor: t.tableBorder,
       lineWidth: 0.3,
+      fillColor: t.tableRow,
+      textColor: t.text,
     },
     headStyles: {
-      fillColor: DARK,
-      textColor: WHITE,
+      fillColor: t.tableHead,
+      textColor: t.tableHeadTxt,
       fontStyle: 'bold',
-      fontSize: 8.5,
+      fontSize: 8,
       halign: 'left',
     },
-    columnStyles: {
-      0: { cellWidth: 75 },
-      1: { cellWidth: 55, textColor: MUTED, fontSize: 8.5 },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'center', fontStyle: 'bold' },
+    alternateRowStyles: {
+      fillColor: t.tableAlt,
     },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 72, fontStyle: 'bold' },
+      1: { cellWidth: 56, textColor: t.textMuted, fontSize: 8 },
+      2: { cellWidth: 18, halign: 'center', textColor: t.textMuted },
+      3: { cellWidth: 30, halign: 'center', fontStyle: 'bold', fontSize: 10 },
+    },
     didParseCell(data) {
-      // Color the note cell based on value
       if (data.column.index === 3 && data.section === 'body') {
         const val = parseFloat(data.cell.raw)
         if (!isNaN(val)) {
-          data.cell.styles.textColor = getNoteColor(val)
+          const c = getNoteColors(val, t)
+          data.cell.styles.textColor = c.fg
+          data.cell.styles.fillColor = c.bg
         }
       }
     },
   })
 
-  y = doc.lastAutoTable.finalY + 10
+  y = doc.lastAutoTable.finalY + 12
 
-  // ── Average summary box ───────────────────────────────────
+  // ── Average summary card ─────────────────────────────────
   if (moyenne !== null) {
     const mention = getMention(moyenne)
-    const noteColor = getNoteColor(moyenne)
-    const boxH = 32
+    const nc = getNoteColors(moyenne, t)
+    const CARD_H = 38
 
-    // Box background
-    doc.setFillColor(...LIGHT)
-    doc.roundedRect(14, y, W - 28, boxH, 3, 3, 'F')
+    // Card bg
+    doc.setFillColor(...t.cardBg)
+    doc.setDrawColor(...t.cardBorder)
+    doc.setLineWidth(0.4)
+    doc.roundedRect(14, y, W - 28, CARD_H, 3, 3, 'FD')
 
     // Left accent bar
-    doc.setFillColor(...TEAL)
-    doc.roundedRect(14, y, 4, boxH, 1, 1, 'F')
+    doc.setFillColor(...nc.fg)
+    doc.roundedRect(14, y, 5, CARD_H, 2, 2, 'F')
 
-    // Label
+    // Eyebrow
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(...MUTED)
-    doc.text('MOYENNE GÉNÉRALE S2', 24, y + 9)
+    doc.setFontSize(7.5)
+    doc.setTextColor(...t.textMuted)
+    doc.text('MOYENNE GÉNÉRALE S2', 25, y + 9)
 
-    // Value
-    doc.setFontSize(26)
+    // Big value
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...noteColor)
-    doc.text(moyenne.toFixed(2), 24, y + 25)
+    doc.setFontSize(28)
+    doc.setTextColor(...nc.fg)
+    doc.text(moyenne.toFixed(2), 25, y + 28)
 
-    // /20 suffix
+    // /20
+    const valW = doc.getTextWidth(moyenne.toFixed(2))
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
-    doc.setTextColor(...MUTED)
-    const avgWidth = doc.getTextWidth(moyenne.toFixed(2))
-    doc.text('/ 20', 24 + avgWidth + 1.5, y + 25)
+    doc.setTextColor(...t.textMuted)
+    doc.text('/ 20', 25 + valW + 2, y + 28)
 
-    // Mention badge (right side)
-    const badgeX = W - 50
-    const badgeY = y + 9
-    doc.setFillColor(...noteColor)
-    doc.roundedRect(badgeX, badgeY, 36, 14, 3, 3, 'F')
+    // Mention badge
+    const BADGE_W = 42
+    const BADGE_H = 13
+    const bx = W - 14 - BADGE_W - 14
+    const by = y + (CARD_H - BADGE_H) / 2
+    doc.setFillColor(...nc.fg)
+    doc.roundedRect(bx, by, BADGE_W, BADGE_H, 3, 3, 'F')
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(...WHITE)
-    doc.text(mention, badgeX + 18, badgeY + 9.5, { align: 'center' })
+    doc.setFontSize(9.5)
+    doc.setTextColor(...t.white)
+    doc.text(mention, bx + BADGE_W / 2, by + 8.5, { align: 'center' })
 
-    // Modules filled note
+    // Partial note if needed
     if (filled.length < results.length) {
       doc.setFont('helvetica', 'italic')
-      doc.setFontSize(7.5)
-      doc.setTextColor(...MUTED)
+      doc.setFontSize(7)
+      doc.setTextColor(...t.textSoft)
       doc.text(
-        `* Calculée sur ${filled.length}/${results.length} modules renseignés`,
-        24, y + boxH + 5
+        `* Calculée sur ${filled.length} / ${results.length} modules renseignés`,
+        25, y + CARD_H + 5
       )
-      y += 6
+      y += 5
     }
 
-    y += boxH + 10
+    y += CARD_H + 12
   }
 
-  // ── Per-module mini bars ───────────────────────────────────
+  // ── Visual note bars ─────────────────────────────────────
   if (filled.length > 0) {
-    y += 2
+    // Section header
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(8)
-    doc.setTextColor(...MUTED)
-    doc.text('DÉTAIL DES NOTES', 14, y)
+    doc.setTextColor(...t.textMuted)
+    doc.text('▸  VISUALISATION DES NOTES', 14, y)
     y += 6
 
-    const barMaxW = W - 28 - 30 - 12  // space for label + score
+    // Card wrapper
+    const BAR_ROWS = filled.length
+    const ROW_H = 13
+    const PADDING = 10
+    const CARD_H = BAR_ROWS * ROW_H + PADDING * 2 - 2
 
-    filled.forEach(r => {
-      if (y > H - 30) return  // avoid overflow
+    doc.setFillColor(...t.cardBg)
+    doc.setDrawColor(...t.cardBorder)
+    doc.setLineWidth(0.4)
+    doc.roundedRect(14, y, W - 28, CARD_H, 3, 3, 'FD')
+
+    const BAR_X = 14 + PADDING
+    const BAR_MAX = W - 28 - PADDING * 2 - 26  // space for label left + score right
+    const LABEL_W = 68
+    const SCORE_W = 18
+
+    let ry = y + PADDING
+
+    filled.forEach((r, i) => {
+      const nc = getNoteColors(r.note, t)
       const pct = r.note / 20
+      const barX = BAR_X + LABEL_W + 4
+      const barW = BAR_MAX - LABEL_W - SCORE_W - 4
 
-      // Label
+      // Alternating subtle row tint
+      if (i % 2 === 0) {
+        doc.setFillColor(...t.sectionBg)
+        doc.setGState(doc.GState({ opacity: 0.5 }))
+        doc.roundedRect(BAR_X - 2, ry - 2, W - 28 - PADDING * 2 + 4, ROW_H - 1, 1, 1, 'F')
+        doc.setGState(doc.GState({ opacity: 1 }))
+      }
+
+      // Module name
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(...DARK)
-      doc.text(r.name, 14, y + 3)
+      doc.setFontSize(7.5)
+      doc.setTextColor(...t.text)
+      // Truncate long names
+      let label = r.name
+      while (doc.getTextWidth(label) > LABEL_W - 2 && label.length > 0) {
+        label = label.slice(0, -1)
+      }
+      if (label !== r.name) label = label.slice(0, -1) + '…'
+      doc.text(label, BAR_X, ry + 6)
 
-      // Background bar
-      doc.setFillColor(226, 232, 240)
-      doc.roundedRect(14, y + 5, barMaxW, 3.5, 1, 1, 'F')
+      // Track
+      doc.setFillColor(...t.barTrack)
+      doc.roundedRect(barX, ry + 3, barW, 4, 1, 1, 'F')
 
-      // Filled bar
-      doc.setFillColor(...getNoteColor(r.note))
-      doc.roundedRect(14, y + 5, barMaxW * pct, 3.5, 1, 1, 'F')
+      // Fill
+      doc.setFillColor(...nc.fg)
+      doc.roundedRect(barX, ry + 3, barW * pct, 4, 1, 1, 'F')
 
-      // Score
+      // Score pill
+      const scoreX = barX + barW + 4
+      doc.setFillColor(...nc.bg)
+      doc.roundedRect(scoreX, ry + 1, SCORE_W, 7, 2, 2, 'F')
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      doc.setTextColor(...getNoteColor(r.note))
-      doc.text(r.note.toFixed(2), W - 14, y + 3, { align: 'right' })
+      doc.setFontSize(7.5)
+      doc.setTextColor(...nc.fg)
+      doc.text(r.note.toFixed(2), scoreX + SCORE_W / 2, ry + 6.3, { align: 'center' })
 
-      y += 14
+      ry += ROW_H
     })
+
+    y += CARD_H + 10
   }
 
-  // ── Footer ────────────────────────────────────────────────
-  doc.setFillColor(...LIGHT)
-  doc.rect(0, H - 14, W, 14, 'F')
+  // ── Footer ───────────────────────────────────────────────
+  doc.setFillColor(...t.footerBg)
+  doc.rect(0, H - 12, W, 12, 'F')
+
+  // Footer top line
+  doc.setDrawColor(...t.divider)
+  doc.setLineWidth(0.3)
+  doc.line(0, H - 12, W, H - 12)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(...MUTED)
-  doc.text('Document généré automatiquement — s2-grade-calc.vercel.app', 14, H - 5)
-  doc.text('Page 1 / 1', W - 14, H - 5, { align: 'right' })
+  doc.setFontSize(7)
+  doc.setTextColor(...t.footerText)
+  doc.text('Document généré automatiquement — s2-grade-calc.vercel.app', 14, H - 4.5)
+  doc.text('Page 1 / 1', W - 14, H - 4.5, { align: 'right' })
 
-  // ── Save ──────────────────────────────────────────────────
+  // ── Save ─────────────────────────────────────────────────
   const filename = studentName?.trim()
     ? `Notes_S2_${studentName.trim().replace(/\s+/g, '_')}.pdf`
     : 'Notes_S2.pdf'

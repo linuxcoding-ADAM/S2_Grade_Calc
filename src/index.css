@@ -24,12 +24,32 @@
   --font:       'Sora', sans-serif;
 }
 
+[data-theme='dark'] {
+  --teal:       #2dd4bf;
+  --teal-dark:  #14b8a6;
+  --teal-bg:    #042f2e;
+  --teal-light: #134e4a;
+  --green:      #34d399;
+  --bg:         #0a0f1a;
+  --surface:    #111827;
+  --border:     #1e293b;
+  --border-2:   #0f172a;
+  --text:       #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-soft:  #475569;
+  --red:        #f87171;
+  --orange:     #fbbf24;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow:     0 4px 16px rgba(0,0,0,0.4);
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 input[type='number']::-webkit-inner-spin-button,

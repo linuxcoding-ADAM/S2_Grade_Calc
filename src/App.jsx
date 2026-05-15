@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { exportToPDF } from './pdfExport'
 import './App.css'
 
 const modules = [
-  { id: 'algebre2',    name: 'Algèbre 2',                     examW: 0.6, caW: 0.4, coef: 3 },
+  { id: 'algebre2',    name: 'Algèbre 2',                     examW: 0.6, caW: 0.4, coef: 2 },
   { id: 'analyse2',   name: 'Analyse 2',                     examW: 0.6, caW: 0.4, coef: 3 },
   { id: 'electro',    name: 'Électricité et magnétisme',      examW: 0.6, caW: 0.4, coef: 3 },
-  { id: 'prog',       name: 'Initiation à la programmation',  examW: 0.6, caW: 0.4, coef: 3 },
+  { id: 'prog',       name: 'Initiation à la programmation',  examW: 0.6, caW: 0.4, coef: 2 },
   { id: 'logiciels',  name: 'Logiciels libres-open sources',  examW: 0.6, caW: 0.4, coef: 2 },
   { id: 'thermo',     name: 'Thermodynamique',                examW: 0.6, caW: 0.4, coef: 3 },
   { id: 'tp_electro', name: 'TP Électricité et magnétisme',   examW: 0,   caW: 1,   coef: 1 },
@@ -48,6 +48,15 @@ export default function App() {
   )
   const [studentName, setStudentName] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [dark, setDark] = useState(() => {
+    return localStorage.getItem('theme') === 'dark'
+  })
+
+  useEffect(() => {
+    const theme = dark ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [dark])
 
   function handleChange(id, field, val) {
     setGrades(prev => ({ ...prev, [id]: { ...prev[id], [field]: clampVal(val) } }))
@@ -90,7 +99,20 @@ export default function App() {
               <span className="univ-tag">Université Béjaïa · L1 ST</span>
               <h1>Calculateur de notes <span className="s2-tag">S2</span></h1>
             </div>
-            <div className="header-icon">🎓</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+              <button
+                className="theme-toggle"
+                onClick={() => setDark(d => !d)}
+                aria-label="Basculer le thème"
+              >
+                <span className="toggle-icon">{dark ? '🌙' : '☀️'}</span>
+                <div className="toggle-track">
+                  <div className="toggle-thumb" />
+                </div>
+                <span>{dark ? 'Sombre' : 'Clair'}</span>
+              </button>
+              <div className="header-icon">🎓</div>
+            </div>
           </div>
           <p className="header-sub">Saisis tes notes pour calculer ta moyenne du semestre</p>
         </div>
@@ -103,7 +125,7 @@ export default function App() {
           <input
             className="name-input"
             type="text"
-            placeholder="ex: Youcef Bouali"
+            placeholder="ex: ADAM"
             value={studentName}
             onChange={e => setStudentName(e.target.value)}
           />

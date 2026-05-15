@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { exportToPDF } from './pdfExport'
 import './App.css'
 
-// S2 modules with their weights and coefficients
 const modules = [
   { id: 'algebre2',    name: 'Algèbre 2',                     examW: 0.6, caW: 0.4, coef: 3 },
   { id: 'analyse2',   name: 'Analyse 2',                     examW: 0.6, caW: 0.4, coef: 3 },
@@ -20,140 +20,168 @@ function calcNote(mod, exam, ca) {
 }
 
 function getMention(avg) {
-  if (avg >= 16) return { label: 'Excellent',    color: '#10b981' }
-  if (avg >= 14) return { label: 'Très Bien',    color: '#10b981' }
-  if (avg >= 12) return { label: 'Bien',          color: '#0d9488' }
-  if (avg >= 10) return { label: 'Passable',      color: '#f59e0b' }
-  return               { label: 'Insuffisant',   color: '#ef4444' }
+  if (avg >= 16) return { label: 'Excellent',   cls: 'green'  }
+  if (avg >= 14) return { label: 'Très Bien',   cls: 'green'  }
+  if (avg >= 12) return { label: 'Bien',         cls: 'teal'   }
+  if (avg >= 10) return { label: 'Passable',     cls: 'orange' }
+  return               { label: 'Insuffisant',  cls: 'red'    }
 }
 
-function getNoteColor(note) {
-  if (note === null) return '#334155'
-  if (note >= 10) return '#0d9488'
-  if (note >= 8)  return '#f59e0b'
-  return '#ef4444'
+function getNoteCls(note) {
+  if (note === null) return ''
+  if (note >= 10) return 'note-good'
+  if (note >= 8)  return 'note-warn'
+  return 'note-bad'
+}
+
+function clampVal(val) {
+  if (val === '') return ''
+  const n = parseFloat(val)
+  if (n > 20) return '20'
+  if (n < 0)  return '0'
+  return val
 }
 
 export default function App() {
   const [grades, setGrades] = useState(
     () => Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }]))
   )
+  const [studentName, setStudentName] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   function handleChange(id, field, val) {
-    // clamp between 0 and 20
-    let v = val
-    if (val !== '' && parseFloat(val) > 20) v = '20'
-    if (val !== '' && parseFloat(val) < 0)  v = '0'
-    setGrades(prev => ({ ...prev, [id]: { ...prev[id], [field]: v } }))
+    setGrades(prev => ({ ...prev, [id]: { ...prev[id], [field]: clampVal(val) } }))
   }
 
   function reset() {
     setGrades(Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }])))
+    setStudentName('')
   }
 
-  // compute per-module results
   const results = modules.map(m => {
     const g = grades[m.id]
-    const note = calcNote(m, g.exam, g.ca)
-    return { ...m, note: note !== null ? Math.round(note * 100) / 100 : null }
+    const raw = calcNote(m, g.exam, g.ca)
+    const note = raw !== null ? Math.round(raw * 100) / 100 : null
+    return { ...m, note }
   })
 
-  // weighted average over filled modules
   const filled = results.filter(r => r.note !== null)
-  const totalCoef = filled.reduce((sum, r) => sum + r.coef, 0)
+  const totalCoef = filled.reduce((s, r) => s + r.coef, 0)
   const moyenne = totalCoef > 0
-    ? Math.round((filled.reduce((sum, r) => sum + r.note * r.coef, 0) / totalCoef) * 100) / 100
+    ? Math.round((filled.reduce((s, r) => s + r.note * r.coef, 0) / totalCoef) * 100) / 100
     : null
 
   const mention = moyenne !== null ? getMention(moyenne) : null
 
+  async function handleExport() {
+    setExporting(true)
+    await new Promise(r => setTimeout(r, 80))
+    exportToPDF(results, moyenne, studentName)
+    setExporting(false)
+  }
+
   return (
     <div className="app">
-      {/* header */}
+
       <header className="header">
         <div className="header-inner">
-          <span className="header-badge">ST · L1 · Béjaïa</span>
-          <h1 className="header-title">Calculateur S2</h1>
-          <p className="header-sub">Entre tes notes pour calculer ta moyenne</p>
+          <div className="header-top">
+            <div>
+              <span className="univ-tag">Université Béjaïa · L1 ST</span>
+              <h1>Calculateur de notes <span className="s2-tag">S2</span></h1>
+            </div>
+            <div className="header-icon">🎓</div>
+          </div>
+          <p className="header-sub">Saisis tes notes pour calculer ta moyenne du semestre</p>
         </div>
       </header>
 
-      <main className="main">
-        {/* average card — shows once any module is filled */}
+      <div className="main">
+
+        <div className="name-row">
+          <label className="name-label">Prénom et nom (optionnel — apparaît sur le PDF)</label>
+          <input
+            className="name-input"
+            type="text"
+            placeholder="ex: Youcef Bouali"
+            value={studentName}
+            onChange={e => setStudentName(e.target.value)}
+          />
+        </div>
+
         {moyenne !== null && (
-          <div className="avg-card">
+          <div className={`avg-card avg-${mention.cls}`}>
             <div className="avg-left">
-              <span className="avg-label">Moyenne générale</span>
-              <span className="avg-value" style={{ color: mention.color }}>
-                {moyenne.toFixed(2)}
+              <span className="avg-eyebrow">Moyenne générale</span>
+              <div className="avg-value-row">
+                <span className="avg-value">{moyenne.toFixed(2)}</span>
                 <span className="avg-denom">/20</span>
-              </span>
+              </div>
               {filled.length < modules.length && (
-                <span className="avg-note">
-                  basée sur {filled.length}/{modules.length} modules
-                </span>
+                <span className="avg-partial">{filled.length}/{modules.length} modules renseignés</span>
               )}
             </div>
-            <span className="mention-badge" style={{ background: mention.color + '20', color: mention.color }}>
-              {mention.label}
-            </span>
+            <span className={`mention mention-${mention.cls}`}>{mention.label}</span>
           </div>
         )}
 
-        {/* module cards */}
         <div className="cards">
-          {results.map((mod) => {
+          {results.map(mod => {
             const g = grades[mod.id]
-            const isTPOnly = mod.examW === 0
-            const noteColor = getNoteColor(mod.note)
+            const isTP = mod.examW === 0
+            const pct = mod.note !== null ? (mod.note / 20) * 100 : 0
 
             return (
               <div key={mod.id} className="card">
-                <div className="card-top">
-                  <div>
+                <div className="card-header">
+                  <div className="card-title-group">
                     <h2 className="card-name">{mod.name}</h2>
                     <div className="card-meta">
-                      {!isTPOnly && <span>Exam {mod.examW * 100}%</span>}
+                      {!isTP && <span>Exam {mod.examW * 100}%</span>}
                       <span>CA {mod.caW * 100}%</span>
-                      <span>Coef {mod.coef}</span>
+                      <span className="coef-badge">Coef {mod.coef}</span>
                     </div>
                   </div>
-
                   {mod.note !== null && (
-                    <div className="note-chip" style={{ borderColor: noteColor + '50', background: noteColor + '15' }}>
-                      <span style={{ color: noteColor }}>{mod.note.toFixed(2)}</span>
+                    <div className={`note-chip ${getNoteCls(mod.note)}`}>
+                      {mod.note.toFixed(2)}
                     </div>
                   )}
                 </div>
 
+                {mod.note !== null && (
+                  <div className="progress-bar">
+                    <div
+                      className={`progress-fill ${getNoteCls(mod.note)}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+
                 <div className="inputs-row">
-                  {!isTPOnly && (
+                  {!isTP && (
                     <div className="input-group">
-                      <label className="input-label exam-label">🎓 Examen</label>
+                      <label className="input-label label-exam">Examen</label>
                       <input
                         type="number"
                         className="grade-input"
-                        placeholder="0 – 20"
+                        placeholder="/ 20"
                         value={g.exam}
-                        min="0"
-                        max="20"
-                        step="0.25"
+                        min="0" max="20" step="0.25"
                         onChange={e => handleChange(mod.id, 'exam', e.target.value)}
                       />
                     </div>
                   )}
                   <div className="input-group">
-                    <label className="input-label ca-label">
-                      📝 {isTPOnly ? 'Note TP' : 'TD / CA'}
+                    <label className="input-label label-ca">
+                      {isTP ? 'Note TP' : 'TD / CA'}
                     </label>
                     <input
                       type="number"
                       className="grade-input"
-                      placeholder="0 – 20"
+                      placeholder="/ 20"
                       value={g.ca}
-                      min="0"
-                      max="20"
-                      step="0.25"
+                      min="0" max="20" step="0.25"
                       onChange={e => handleChange(mod.id, 'ca', e.target.value)}
                     />
                   </div>
@@ -163,35 +191,38 @@ export default function App() {
           })}
         </div>
 
-        {/* recap table */}
         {filled.length > 0 && (
           <div className="recap">
-            <h3 className="recap-title">Récapitulatif</h3>
-            <div className="recap-list">
-              {results.map(r => r.note !== null && (
-                <div key={r.id} className="recap-row">
-                  <span className="recap-name">{r.name}</span>
-                  <span className="recap-coef">coef {r.coef}</span>
-                  <span className="recap-note" style={{ color: getNoteColor(r.note) }}>
-                    {r.note.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-
-              {moyenne !== null && (
-                <div className="recap-avg-row">
-                  <span>Moyenne S2</span>
-                  <span style={{ color: mention.color }}>{moyenne.toFixed(2)}/20</span>
-                </div>
-              )}
-            </div>
+            <div className="recap-head">Récapitulatif</div>
+            {results.map(r => r.note !== null && (
+              <div key={r.id} className="recap-row">
+                <span className="recap-name">{r.name}</span>
+                <span className="recap-coef">coef {r.coef}</span>
+                <span className={`recap-note ${getNoteCls(r.note)}`}>{r.note.toFixed(2)}</span>
+              </div>
+            ))}
+            {moyenne !== null && (
+              <div className={`recap-avg mention-${mention.cls}`}>
+                <span>Moyenne S2</span>
+                <span>{moyenne.toFixed(2)} / 20</span>
+              </div>
+            )}
           </div>
         )}
 
-        <button className="reset-btn" onClick={reset}>
-          Réinitialiser
-        </button>
-      </main>
+        <div className="actions">
+          {filled.length > 0 && (
+            <button className="btn-export" onClick={handleExport} disabled={exporting}>
+              {exporting
+                ? <><span className="spinner" /> Génération...</>
+                : <><span>↓</span> Exporter en PDF</>
+              }
+            </button>
+          )}
+          <button className="btn-reset" onClick={reset}>Réinitialiser</button>
+        </div>
+
+      </div>
     </div>
   )
 }

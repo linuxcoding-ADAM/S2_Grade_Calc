@@ -5,20 +5,23 @@
 }
 
 :root {
-  --teal: #0d9488;
-  --teal-dark: #0f766e;
-  --teal-light: #99f6e4;
-  --green: #059669;
-  --bg: #0b1120;
-  --surface: #111827;
-  --surface-2: #1a2235;
-  --border: #1f2d42;
-  --text: #f1f5f9;
+  --teal:       #0d9488;
+  --teal-dark:  #0f766e;
+  --teal-bg:    #f0fdfa;
+  --teal-light: #ccfbf1;
+  --green:      #059669;
+  --bg:         #f8fafc;
+  --surface:    #ffffff;
+  --border:     #e2e8f0;
+  --border-2:   #f1f5f9;
+  --text:       #0f172a;
   --text-muted: #64748b;
-  --text-soft: #94a3b8;
-  --red: #ef4444;
-  --orange: #f59e0b;
-  --font: 'Plus Jakarta Sans', sans-serif;
+  --text-soft:  #94a3b8;
+  --red:        #ef4444;
+  --orange:     #f59e0b;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow:     0 4px 16px rgba(0,0,0,0.07);
+  --font:       'Sora', sans-serif;
 }
 
 body {

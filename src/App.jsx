@@ -20,11 +20,11 @@ function calcNote(mod, exam, ca) {
 }
 
 function getMention(avg) {
-  if (avg >= 16) return { label: 'Excellent',  cls: 'green'  }
-  if (avg >= 14) return { label: 'Très Bien',  cls: 'green'  }
-  if (avg >= 12) return { label: 'Bien',        cls: 'teal'   }
-  if (avg >= 10) return { label: 'Passable',    cls: 'orange' }
-  return               { label: 'Insuffisant', cls: 'red'    }
+  if (avg >= 16) return { label: 'Excellent',   cls: 'green'  }
+  if (avg >= 14) return { label: 'Très Bien',   cls: 'green'  }
+  if (avg >= 12) return { label: 'Bien',         cls: 'teal'   }
+  if (avg >= 10) return { label: 'Passable',     cls: 'orange' }
+  return               { label: 'Insuffisant',  cls: 'red'    }
 }
 
 function getNoteCls(note) {
@@ -46,10 +46,14 @@ export default function App() {
   const [grades, setGrades] = useState(
     () => Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }]))
   )
-  const [studentName, setStudentName] = useState('')
-  const [exporting, setExporting] = useState(false)
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  const avgRef = useRef(null)
+  const [studentName, setStudentName]   = useState('')
+  const [nameTouched, setNameTouched]   = useState(false)
+  const [exporting, setExporting]       = useState(false)
+  const [pdfTemplate, setPdfTemplate]   = useState('pro') // 'pro' | 'cartoon'
+  const [dark, setDark]                 = useState(() => localStorage.getItem('theme') === 'dark')
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false)
+  const avgRef  = useRef(null)
+  const nameRef = useRef(null)
   const prevAllFilled = useRef(false)
 
   useEffect(() => {
@@ -64,6 +68,7 @@ export default function App() {
   function reset() {
     setGrades(Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }])))
     setStudentName('')
+    setNameTouched(false)
     prevAllFilled.current = false
   }
 
@@ -74,15 +79,22 @@ export default function App() {
     return { ...m, note }
   })
 
-  const filled = results.filter(r => r.note !== null)
+  const filled    = results.filter(r => r.note !== null)
   const allFilled = filled.length === modules.length
   const totalCoef = filled.reduce((s, r) => s + r.coef, 0)
-  const moyenne = totalCoef > 0
+  const moyenne   = totalCoef > 0
     ? Math.round((filled.reduce((s, r) => s + r.note * r.coef, 0) / totalCoef) * 100) / 100
     : null
 
-  const showAvg = allFilled && moyenne !== null
-  const mention = showAvg ? getMention(moyenne) : null
+  const hasName   = studentName.trim().length > 0
+  const nameError = nameTouched && !hasName
+  // Average is shown ONLY when all modules filled AND name entered
+  const showAvg   = allFilled && moyenne !== null && hasName
+  const mention   = showAvg ? getMention(moyenne) : null
+  const progress  = filled.length / modules.length
+
+  // Banner: all filled but no name yet
+  const showNameBanner = allFilled && !hasName
 
   useEffect(() => {
     if (showAvg && !prevAllFilled.current) {
@@ -95,13 +107,18 @@ export default function App() {
   }, [showAvg])
 
   async function handleExport() {
+    if (!hasName) {
+      setNameTouched(true)
+      nameRef.current?.focus()
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     setExporting(true)
     await new Promise(r => setTimeout(r, 80))
-    exportToPDF(results, moyenne, studentName)
+    exportToPDF(results, moyenne, studentName, pdfTemplate)
     setExporting(false)
+    setShowTemplateMenu(false)
   }
-
-  const progress = filled.length / modules.length
 
   return (
     <div className="app">
@@ -112,10 +129,9 @@ export default function App() {
             <div className="header-left">
               <span className="univ-tag">Université Béjaïa · L1 ST</span>
               <h1>Calculateur de notes <span className="s2-tag">S2</span></h1>
-              <p className="header-sub">Remplis toutes tes notes pour révéler ta moyenne finale</p>
+              <p className="header-sub">Remplis ton nom et toutes tes notes pour révéler ta moyenne finale</p>
             </div>
             <div className="header-right">
-              {/* Premium two-option toggle */}
               <button
                 className="theme-toggle"
                 onClick={() => setDark(d => !d)}
@@ -150,23 +166,37 @@ export default function App() {
           </span>
         </div>
 
-        {/* Student name */}
+        {/* ── Student name (REQUIRED) ── */}
         <div className="name-row">
           <label className="name-label">
             Prénom et nom
-            <span className="name-label-opt"> — optionnel, apparaît sur le PDF</span>
+            <span className="name-required-badge">Obligatoire</span>
           </label>
-          <div className="name-input-wrap">
+          <div className={`name-input-wrap ${nameError ? 'name-error' : ''}`}>
             <span className="name-icon">👤</span>
             <input
-              className="name-input"
+              ref={nameRef}
+              className={`name-input ${nameError ? 'input-error' : ''}`}
               type="text"
-              placeholder="ex: ADAM"
+              placeholder="ex: ADAM Mohamed"
               value={studentName}
-              onChange={e => setStudentName(e.target.value)}
+              onChange={e => { setStudentName(e.target.value); setNameTouched(true) }}
+              onBlur={() => setNameTouched(true)}
             />
+            {hasName && <span className="name-check">✓</span>}
           </div>
+          {nameError && (
+            <p className="name-error-msg">⚠ Entrez votre nom pour afficher la moyenne et exporter le PDF.</p>
+          )}
         </div>
+
+        {/* Banner when all modules done but name missing */}
+        {showNameBanner && (
+          <div className="name-banner" onClick={() => { nameRef.current?.focus(); nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}>
+            <span className="name-banner-icon">👆</span>
+            <span>Tous les modules sont remplis ! Entrez votre <strong>nom</strong> pour voir votre moyenne.</span>
+          </div>
+        )}
 
         {/* Module cards */}
         <div className="cards">
@@ -201,10 +231,7 @@ export default function App() {
                 </div>
 
                 <div className="progress-bar">
-                  <div
-                    className={`progress-fill ${noteCls}`}
-                    style={{ width: `${pct}%` }}
-                  />
+                  <div className={`progress-fill ${noteCls}`} style={{ width: `${pct}%` }} />
                 </div>
 
                 <div className="inputs-row">
@@ -260,7 +287,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Final average — ONLY when all modules are filled */}
+        {/* Final average — only when all filled + name entered */}
         {showAvg && (
           <div ref={avgRef} className={`avg-card avg-${mention.cls}`}>
             <div className="avg-glow" />
@@ -281,12 +308,44 @@ export default function App() {
         {/* Actions */}
         <div className="actions">
           {showAvg && (
-            <button className="btn-export" onClick={handleExport} disabled={exporting}>
-              {exporting
-                ? <><span className="spinner" /> Génération du PDF...</>
-                : <><span className="btn-dl-icon">↓</span> Exporter en PDF</>}
+            <div className="export-group">
+              {/* Template selector */}
+              <div className="template-selector">
+                <span className="template-label">Style PDF :</span>
+                <div className="template-tabs">
+                  <button
+                    className={`template-tab ${pdfTemplate === 'pro' ? 'active' : ''}`}
+                    onClick={() => setPdfTemplate('pro')}
+                  >
+                    <span>🏢</span> Professionnel
+                  </button>
+                  <button
+                    className={`template-tab ${pdfTemplate === 'cartoon' ? 'active' : ''}`}
+                    onClick={() => setPdfTemplate('cartoon')}
+                  >
+                    <span>🎨</span> Cartoon
+                  </button>
+                </div>
+              </div>
+
+              <button className="btn-export" onClick={handleExport} disabled={exporting}>
+                {exporting
+                  ? <><span className="spinner" /> Génération du PDF...</>
+                  : <><span className="btn-dl-icon">↓</span> Exporter en PDF</>}
+              </button>
+            </div>
+          )}
+
+          {/* If all filled but no name, show locked export hint */}
+          {allFilled && !hasName && (
+            <button
+              className="btn-export btn-export-locked"
+              onClick={() => { setNameTouched(true); nameRef.current?.focus(); nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}
+            >
+              <span>🔒</span> Entrez votre nom pour exporter
             </button>
           )}
+
           <button className="btn-reset" onClick={reset}>
             <span>↺</span> Réinitialiser
           </button>

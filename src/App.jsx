@@ -115,19 +115,15 @@ export default function App() {
               <p className="header-sub">Remplis toutes tes notes pour révéler ta moyenne finale</p>
             </div>
             <div className="header-right">
+              {/* Premium two-option toggle */}
               <button
                 className="theme-toggle"
                 onClick={() => setDark(d => !d)}
                 aria-label="Basculer le thème"
               >
-                <span className="toggle-icon-wrap">
-                  <span className={`ti sun ${!dark ? 'ti-active' : ''}`}>☀️</span>
-                  <span className={`ti moon ${dark ? 'ti-active' : ''}`}>🌙</span>
-                </span>
-                <div className="toggle-track">
-                  <div className="toggle-thumb" />
-                </div>
-                <span className="toggle-label">{dark ? 'Sombre' : 'Clair'}</span>
+                <div className="toggle-slider" />
+                <span className={`toggle-option ${!dark ? 'active' : ''}`}>☀️</span>
+                <span className={`toggle-option ${dark ? 'active' : ''}`}>🌙</span>
               </button>
               <div className="header-icon">🎓</div>
             </div>

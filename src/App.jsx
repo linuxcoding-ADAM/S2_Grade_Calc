@@ -178,7 +178,7 @@ export default function App() {
               ref={nameRef}
               className={`name-input ${nameError ? 'input-error' : ''}`}
               type="text"
-              placeholder="ex: ADAM Mohamed"
+              placeholder="ex: ADAM moha slimane lakhdar tahar"
               value={studentName}
               onChange={e => { setStudentName(e.target.value); setNameTouched(true) }}
               onBlur={() => setNameTouched(true)}

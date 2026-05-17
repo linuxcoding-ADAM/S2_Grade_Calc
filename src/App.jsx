@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { exportToPDF } from './pdfExport.js'
 import './App.css'
 
+const PASSWORD = 's2_fl_jib'
+
 const modules = [
   { id: 'algebre2',    name: 'Algèbre 2',                     examW: 0.6, caW: 0.4, coef: 2 },
   { id: 'analyse2',   name: 'Analyse 2',                     examW: 0.6, caW: 0.4, coef: 3 },
@@ -42,16 +44,118 @@ function clampVal(val) {
   return val
 }
 
+// ── Password Gate ────────────────────────────────────────────
+function PasswordGate({ onUnlock }) {
+  const [value, setValue]     = useState('')
+  const [error, setError]     = useState(false)
+  const [shake, setShake]     = useState(false)
+  const [show, setShow]       = useState(false)
+  const [attempts, setAttempts] = useState(0)
+  const inputRef = useRef(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  function handleSubmit() {
+    if (value === PASSWORD) {
+      onUnlock()
+    } else {
+      setAttempts(a => a + 1)
+      setError(true)
+      setShake(true)
+      setTimeout(() => setShake(false), 500)
+      setValue('')
+      inputRef.current?.focus()
+    }
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter') handleSubmit()
+    if (error) setError(false)
+  }
+
+  return (
+    <div className="gate-overlay">
+      {/* Animated background orbs */}
+      <div className="gate-orb gate-orb-1" />
+      <div className="gate-orb gate-orb-2" />
+      <div className="gate-orb gate-orb-3" />
+
+      {/* Grid pattern */}
+      <div className="gate-grid" />
+
+      <div className={`gate-card ${shake ? 'gate-shake' : ''}`}>
+        {/* Top accent bar */}
+        <div className="gate-accent-bar" />
+
+        {/* Icon */}
+        <div className="gate-icon-wrap">
+          <div className="gate-icon-ring" />
+          <span className="gate-icon">🔐</span>
+        </div>
+
+        {/* Titles */}
+        <div className="gate-univ-tag">Université Béjaïa · L1 ST</div>
+        <h1 className="gate-title">Accès Sécurisé</h1>
+        <p className="gate-sub">Entrez le mot de passe pour accéder au calculateur de notes S2</p>
+
+        {/* Input */}
+        <div className="gate-input-wrap">
+          <span className="gate-input-icon">🔑</span>
+          <input
+            ref={inputRef}
+            className={`gate-input ${error ? 'gate-input-error' : ''}`}
+            type={show ? 'text' : 'password'}
+            placeholder="Mot de passe..."
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(false) }}
+            onKeyDown={handleKey}
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <button
+            className="gate-show-btn"
+            onClick={() => setShow(s => !s)}
+            tabIndex={-1}
+            type="button"
+            aria-label={show ? 'Masquer' : 'Afficher'}
+          >
+            {show ? '🙈' : '👁️'}
+          </button>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <p className="gate-error">
+            ⚠ Mot de passe incorrect{attempts > 1 ? ` (${attempts} tentatives)` : ''}.
+          </p>
+        )}
+
+        {/* Submit */}
+        <button className="gate-btn" onClick={handleSubmit}>
+          <span>Accéder</span>
+          <span className="gate-btn-arrow">→</span>
+        </button>
+
+        {/* Footer hint */}
+        <p className="gate-hint">Accès réservé aux étudiants ST — Béjaïa</p>
+      </div>
+    </div>
+  )
+}
+
+// ── Main App ─────────────────────────────────────────────────
 export default function App() {
+  const [unlocked, setUnlocked] = useState(
+    () => sessionStorage.getItem('s2_unlocked') === 'yes'
+  )
   const [grades, setGrades] = useState(
     () => Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }]))
   )
   const [studentName, setStudentName]   = useState('')
   const [nameTouched, setNameTouched]   = useState(false)
   const [exporting, setExporting]       = useState(false)
-  const [pdfTemplate, setPdfTemplate]   = useState('pro') // 'pro' | 'cartoon'
+  const [pdfTemplate, setPdfTemplate]   = useState('pro')
   const [dark, setDark]                 = useState(() => localStorage.getItem('theme') === 'dark')
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false)
   const avgRef  = useRef(null)
   const nameRef = useRef(null)
   const prevAllFilled = useRef(false)
@@ -60,6 +164,11 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  function handleUnlock() {
+    sessionStorage.setItem('s2_unlocked', 'yes')
+    setUnlocked(true)
+  }
 
   function handleChange(id, field, val) {
     setGrades(prev => ({ ...prev, [id]: { ...prev[id], [field]: clampVal(val) } }))
@@ -88,12 +197,9 @@ export default function App() {
 
   const hasName   = studentName.trim().length > 0
   const nameError = nameTouched && !hasName
-  // Average is shown ONLY when all modules filled AND name entered
   const showAvg   = allFilled && moyenne !== null && hasName
   const mention   = showAvg ? getMention(moyenne) : null
   const progress  = filled.length / modules.length
-
-  // Banner: all filled but no name yet
   const showNameBanner = allFilled && !hasName
 
   useEffect(() => {
@@ -117,7 +223,15 @@ export default function App() {
     await new Promise(r => setTimeout(r, 80))
     exportToPDF(results, moyenne, studentName, pdfTemplate)
     setExporting(false)
-    setShowTemplateMenu(false)
+  }
+
+  // Show password gate if not unlocked
+  if (!unlocked) {
+    return (
+      <div className="app">
+        <PasswordGate onUnlock={handleUnlock} />
+      </div>
+    )
   }
 
   return (
@@ -152,7 +266,6 @@ export default function App() {
 
       <div className="main">
 
-        {/* Progress indicator */}
         <div className="prog-pill">
           <div className="prog-bar-wrap">
             <div className="prog-bar-fill" style={{ width: `${progress * 100}%` }} />
@@ -166,7 +279,6 @@ export default function App() {
           </span>
         </div>
 
-        {/* ── Student name (REQUIRED) ── */}
         <div className="name-row">
           <label className="name-label">
             Prénom et nom
@@ -178,7 +290,7 @@ export default function App() {
               ref={nameRef}
               className={`name-input ${nameError ? 'input-error' : ''}`}
               type="text"
-              placeholder="ex: ADAM moha slimane lakhdar tahar syphax dilane "
+              placeholder="ex: ADAM moha slimane lakhdar tahar syphax dilane"
               value={studentName}
               onChange={e => { setStudentName(e.target.value); setNameTouched(true) }}
               onBlur={() => setNameTouched(true)}
@@ -190,7 +302,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Banner when all modules done but name missing */}
         {showNameBanner && (
           <div className="name-banner" onClick={() => { nameRef.current?.focus(); nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}>
             <span className="name-banner-icon">👆</span>
@@ -198,7 +309,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Module cards */}
         <div className="cards">
           {results.map((mod, idx) => {
             const g = grades[mod.id]
@@ -269,7 +379,6 @@ export default function App() {
           })}
         </div>
 
-        {/* Recap */}
         {filled.length > 0 && (
           <div className="recap">
             <div className="recap-head">
@@ -287,7 +396,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Final average — only when all filled + name entered */}
         {showAvg && (
           <div ref={avgRef} className={`avg-card avg-${mention.cls}`}>
             <div className="avg-glow" />
@@ -305,11 +413,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Actions */}
         <div className="actions">
           {showAvg && (
             <div className="export-group">
-              {/* Template selector */}
               <div className="template-selector">
                 <span className="template-label">Style PDF :</span>
                 <div className="template-tabs">
@@ -336,7 +442,6 @@ export default function App() {
             </div>
           )}
 
-          {/* If all filled but no name, show locked export hint */}
           {allFilled && !hasName && (
             <button
               className="btn-export btn-export-locked"

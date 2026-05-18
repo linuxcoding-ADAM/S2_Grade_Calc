@@ -381,10 +381,6 @@ export default function App() {
 
       </div>
 
-      {/* ── Floating admin fab ── */}
-      <a href="/admin" className="admin-fab" title="Panneau Admin" aria-label="Accès admin">
-        ⚙️
-      </a>
     </div>
   )
 }

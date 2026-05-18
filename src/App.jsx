@@ -372,7 +372,19 @@ export default function App() {
           </button>
         </div>
 
+        {/* ── Footer ── */}
+        <footer className="calc-footer">
+          <span>Université Béjaïa · L1 ST · S2</span>
+          <span className="calc-footer-sep">·</span>
+          <a href="/admin" className="calc-footer-admin-link">⚙ Admin</a>
+        </footer>
+
       </div>
+
+      {/* ── Floating admin fab ── */}
+      <a href="/admin" className="admin-fab" title="Panneau Admin" aria-label="Accès admin">
+        ⚙️
+      </a>
     </div>
   )
 }

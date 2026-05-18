@@ -82,6 +82,7 @@ export default function AdminDashboard() {
   const [page, setPage]           = useState(1)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Auth guard
   useEffect(() => {
@@ -182,8 +183,28 @@ export default function AdminDashboard() {
 
   return (
     <div className="adm-app">
+      {/* ── Mobile top bar ─────────────────────────────── */}
+      <div className="adm-mobile-topbar">
+        <button
+          className={`adm-hamburger ${sidebarOpen ? 'open' : ''}`}
+          onClick={() => setSidebarOpen(o => !o)}
+          aria-label="Menu"
+        >
+          <span className="adm-hamburger-line" />
+          <span className="adm-hamburger-line" />
+          <span className="adm-hamburger-line" />
+        </button>
+        <span className="adm-mobile-title">Admin Panel</span>
+        <button className="adm-btn adm-btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={handleLogout}>Quitter</button>
+      </div>
+
+      {/* ── Sidebar backdrop (mobile) ────────────────── */}
+      {sidebarOpen && (
+        <div className="adm-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* ── Sidebar ──────────────────────────────────── */}
-      <aside className="adm-sidebar">
+      <aside className={`adm-sidebar ${sidebarOpen ? 'adm-sidebar-open' : ''}`}>
         <div className="adm-logo">
           <span className="adm-logo-icon">📊</span>
           <div>
@@ -192,13 +213,13 @@ export default function AdminDashboard() {
           </div>
         </div>
         <nav className="adm-nav">
-          <a href="#dashboard" className="adm-nav-item active">
+          <a href="#dashboard" className="adm-nav-item active" onClick={() => setSidebarOpen(false)}>
             <span>🏠</span> Dashboard
           </a>
-          <a href="#table" className="adm-nav-item">
+          <a href="#table" className="adm-nav-item" onClick={() => setSidebarOpen(false)}>
             <span>📋</span> Calculs
           </a>
-          <a href="#charts" className="adm-nav-item">
+          <a href="#charts" className="adm-nav-item" onClick={() => setSidebarOpen(false)}>
             <span>📈</span> Analytique
           </a>
           <a href="/" className="adm-nav-item" target="_blank" rel="noreferrer">

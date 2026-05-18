@@ -55,7 +55,7 @@ export function clearAllCalculations() {
 
 // ── Admin auth helpers ────────────────────────────────────
 const ADMIN_KEY = 's2_admin_token'
-const ADMIN_PASSWORD = 'admin_s2_bejaia'
+const ADMIN_PASSWORD = 'her_name_is_imane'
 
 export function adminLogin(password) {
   if (password === ADMIN_PASSWORD) {

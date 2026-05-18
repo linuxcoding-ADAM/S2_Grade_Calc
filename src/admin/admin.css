@@ -556,8 +556,17 @@
 
 /* ── Mobile responsive ───────────────────────────────────────── */
 @media (max-width: 768px) {
-  .adm-sidebar { display: none; }
-  .adm-main    { padding: 18px 14px 40px; }
+  .adm-sidebar {
+    position: fixed;
+    left: -240px;
+    top: 0; bottom: 0;
+    z-index: 999;
+    transition: left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 220px;
+    box-shadow: 4px 0 30px rgba(0,0,0,0.5);
+  }
+  .adm-sidebar.adm-sidebar-open { left: 0; }
+  .adm-main    { padding: 70px 14px 40px; }
   .adm-stats-row { grid-template-columns: 1fr 1fr; }
   .adm-topbar  { flex-direction: column; }
   .adm-detail-hero { flex-direction: column; align-items: flex-start; }
@@ -566,3 +575,63 @@
 @media (max-width: 480px) {
   .adm-stats-row { grid-template-columns: 1fr; }
 }
+
+/* ── Mobile top bar ──────────────────────────────────────────── */
+.adm-mobile-topbar {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: #0a1120;
+  border-bottom: 1px solid #1e293b;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  z-index: 998;
+}
+@media (max-width: 768px) {
+  .adm-mobile-topbar { display: flex; }
+}
+
+.adm-hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 36px; height: 36px;
+  justify-content: center;
+  align-items: center;
+  background: #111827;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+.adm-hamburger-line {
+  width: 18px; height: 2px;
+  background: #94a3b8;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.adm-hamburger.open .adm-hamburger-line:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.adm-hamburger.open .adm-hamburger-line:nth-child(2) { opacity: 0; }
+.adm-hamburger.open .adm-hamburger-line:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.adm-mobile-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+/* Sidebar overlay backdrop */
+.adm-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 998;
+  backdrop-filter: blur(2px);
+}
+@media (max-width: 768px) {
+  .adm-sidebar-backdrop { display: block; }
+}
+

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { exportToPDF } from './pdfExport.js'
+import { saveCalculation } from './db/storage.js'
 import './App.css'
-
-const PASSWORD = 's2_fl_jib'
 
 const modules = [
   { id: 'algebre2',    name: 'Algèbre 2',                     examW: 0.6, caW: 0.4, coef: 2 },
@@ -44,110 +43,8 @@ function clampVal(val) {
   return val
 }
 
-// ── Password Gate ────────────────────────────────────────────
-function PasswordGate({ onUnlock }) {
-  const [value, setValue]     = useState('')
-  const [error, setError]     = useState(false)
-  const [shake, setShake]     = useState(false)
-  const [show, setShow]       = useState(false)
-  const [attempts, setAttempts] = useState(0)
-  const inputRef = useRef(null)
-
-  useEffect(() => { inputRef.current?.focus() }, [])
-
-  function handleSubmit() {
-    if (value === PASSWORD) {
-      onUnlock()
-    } else {
-      setAttempts(a => a + 1)
-      setError(true)
-      setShake(true)
-      setTimeout(() => setShake(false), 500)
-      setValue('')
-      inputRef.current?.focus()
-    }
-  }
-
-  function handleKey(e) {
-    if (e.key === 'Enter') handleSubmit()
-    if (error) setError(false)
-  }
-
-  return (
-    <div className="gate-overlay">
-      {/* Animated background orbs */}
-      <div className="gate-orb gate-orb-1" />
-      <div className="gate-orb gate-orb-2" />
-      <div className="gate-orb gate-orb-3" />
-
-      {/* Grid pattern */}
-      <div className="gate-grid" />
-
-      <div className={`gate-card ${shake ? 'gate-shake' : ''}`}>
-        {/* Top accent bar */}
-        <div className="gate-accent-bar" />
-
-        {/* Icon */}
-        <div className="gate-icon-wrap">
-          <div className="gate-icon-ring" />
-          <span className="gate-icon">🔐</span>
-        </div>
-
-        {/* Titles */}
-        <div className="gate-univ-tag">Université Béjaïa · L1 ST</div>
-        <h1 className="gate-title">Accès Sécurisé</h1>
-        <p className="gate-sub">Entrez le mot de passe pour accéder au calculateur de notes S2</p>
-
-        {/* Input */}
-        <div className="gate-input-wrap">
-          <span className="gate-input-icon">🔑</span>
-          <input
-            ref={inputRef}
-            className={`gate-input ${error ? 'gate-input-error' : ''}`}
-            type={show ? 'text' : 'password'}
-            placeholder="Mot de passe..."
-            value={value}
-            onChange={e => { setValue(e.target.value); setError(false) }}
-            onKeyDown={handleKey}
-            autoComplete="off"
-            spellCheck="false"
-          />
-          <button
-            className="gate-show-btn"
-            onClick={() => setShow(s => !s)}
-            tabIndex={-1}
-            type="button"
-            aria-label={show ? 'Masquer' : 'Afficher'}
-          >
-            {show ? '🙈' : '👁️'}
-          </button>
-        </div>
-
-        {/* Error message */}
-        {error && (
-          <p className="gate-error">
-            ⚠ Mot de passe incorrect{attempts > 1 ? ` (${attempts} tentatives)` : ''}.
-          </p>
-        )}
-
-        {/* Submit */}
-        <button className="gate-btn" onClick={handleSubmit}>
-          <span>Accéder</span>
-          <span className="gate-btn-arrow">→</span>
-        </button>
-
-        {/* Footer hint */}
-        <p className="gate-hint">Accès réservé aux étudiants ST — Béjaïa</p>
-      </div>
-    </div>
-  )
-}
-
 // ── Main App ─────────────────────────────────────────────────
 export default function App() {
-  const [unlocked, setUnlocked] = useState(
-    () => sessionStorage.getItem('s2_unlocked') === 'yes'
-  )
   const [grades, setGrades] = useState(
     () => Object.fromEntries(modules.map(m => [m.id, { exam: '', ca: '' }]))
   )
@@ -156,19 +53,17 @@ export default function App() {
   const [exporting, setExporting]       = useState(false)
   const [pdfTemplate, setPdfTemplate]   = useState('pro')
   const [dark, setDark]                 = useState(() => localStorage.getItem('theme') === 'dark')
-  const avgRef  = useRef(null)
-  const nameRef = useRef(null)
+  const [savedBanner, setSavedBanner]   = useState(false)  // auto-save feedback
+
+  const avgRef        = useRef(null)
+  const nameRef       = useRef(null)
   const prevAllFilled = useRef(false)
+  const savedId       = useRef(null)  // track last saved record to prevent re-save
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
-
-  function handleUnlock() {
-    sessionStorage.setItem('s2_unlocked', 'yes')
-    setUnlocked(true)
-  }
 
   function handleChange(id, field, val) {
     setGrades(prev => ({ ...prev, [id]: { ...prev[id], [field]: clampVal(val) } }))
@@ -179,6 +74,8 @@ export default function App() {
     setStudentName('')
     setNameTouched(false)
     prevAllFilled.current = false
+    savedId.current = null
+    setSavedBanner(false)
   }
 
   const results = modules.map(m => {
@@ -195,13 +92,14 @@ export default function App() {
     ? Math.round((filled.reduce((s, r) => s + r.note * r.coef, 0) / totalCoef) * 100) / 100
     : null
 
-  const hasName   = studentName.trim().length > 0
-  const nameError = nameTouched && !hasName
-  const showAvg   = allFilled && moyenne !== null && hasName
-  const mention   = showAvg ? getMention(moyenne) : null
-  const progress  = filled.length / modules.length
+  const hasName        = studentName.trim().length > 0
+  const nameError      = nameTouched && !hasName
+  const showAvg        = allFilled && moyenne !== null && hasName
+  const mention        = showAvg ? getMention(moyenne) : null
+  const progress       = filled.length / modules.length
   const showNameBanner = allFilled && !hasName
 
+  // ── Auto-scroll on completion ────────────────────────
   useEffect(() => {
     if (showAvg && !prevAllFilled.current) {
       prevAllFilled.current = true
@@ -211,6 +109,25 @@ export default function App() {
     }
     if (!showAvg) prevAllFilled.current = false
   }, [showAvg])
+
+  // ── Auto-save when calculation is complete ───────────
+  useEffect(() => {
+    if (showAvg && savedId.current === null) {
+      const record = saveCalculation({
+        studentName: studentName.trim(),
+        grades,
+        results,
+        moyenne,
+        mention: mention.label,
+        mentionCls: mention.cls,
+        semester: 'S2',
+      })
+      savedId.current = record.id
+      setSavedBanner(true)
+      setTimeout(() => setSavedBanner(false), 3500)
+    }
+    if (!showAvg) savedId.current = null
+  }, [showAvg])           // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleExport() {
     if (!hasName) {
@@ -223,15 +140,6 @@ export default function App() {
     await new Promise(r => setTimeout(r, 80))
     exportToPDF(results, moyenne, studentName, pdfTemplate)
     setExporting(false)
-  }
-
-  // Show password gate if not unlocked
-  if (!unlocked) {
-    return (
-      <div className="app">
-        <PasswordGate onUnlock={handleUnlock} />
-      </div>
-    )
   }
 
   return (
@@ -265,6 +173,14 @@ export default function App() {
       </header>
 
       <div className="main">
+
+        {/* ── Auto-save toast ── */}
+        {savedBanner && (
+          <div className="save-toast">
+            <span className="save-toast-icon">✓</span>
+            <span>Calcul enregistré automatiquement</span>
+          </div>
+        )}
 
         <div className="prog-pill">
           <div className="prog-bar-wrap">

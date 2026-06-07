@@ -18,6 +18,23 @@ Compute your weighted average, get your mention instantly, and export a clean PD
 
 ---
 
+## 📸 Screenshots
+
+### 🖥️ Desktop Version
+
+| Light Mode | Dark Mode |
+|------------|-----------|
+| ![Desktop Light](./screenshots/desktop-light.png) | ![Desktop Dark](./screenshots/desktop-dark.png) |
+
+### 📱 Mobile Version
+
+| Calculator | Results |
+|------------|---------|
+| ![Mobile Calculator](./screenshots/mobile-calculator.png) | ![Mobile Results](./screenshots/mobile-results.png) |
+
+> Create a `screenshots/` folder in the repository and add the images with the names above.
+
+
 ## ✨ Features
 
 - **📊 Smart grade calculation** — enter your Exam and CA (contrôle continu) marks; each module's final note is computed using its official weighting (60% exam / 40% CA, TP modules 100% CA) and coefficient
